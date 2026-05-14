@@ -78,12 +78,12 @@
     <div class="ab ready" id="abR"><span class="k">R</span> Shield <span class="cdtxt" id="cdR">Ready</span></div>
     <div class="ab ready" id="abF"><span class="k">F</span> Heal <span class="cdtxt" id="cdF">Ready</span></div>
     <div class="ab hidden-ab" id="abG"><span class="k">G</span> Lightning <span class="cdtxt" id="cdG">Ready</span></div>
-    <div class="ab ready" id="abClick"><span class="k">Click</span> Shoot <span class="cdtxt" id="cdClick">Ready</span></div>
+    <div class="ab ready" id="abClick"><span class="k">Space</span> Shoot <span class="cdtxt" id="cdClick">Ready</span></div>
   </div>
   <div id="overlay">
     <h1>⚔ Circle Arena</h1>
     <div class="sub">
-      <b>WASD / Arrows</b> — Move &nbsp;|&nbsp; <b>Click</b> — Shoot nearest<br>
+      <b>WASD / Arrows</b> — Move &nbsp;|&nbsp; <b>Space</b> — Shoot nearest<br>
       <b>Q</b> Fireball &nbsp;|&nbsp; <b>X</b> Dash &nbsp;|&nbsp; <b>E</b> Shockwave<br>
       <b>R</b> Shield &nbsp;|&nbsp; <b>F</b> Heal &nbsp;|&nbsp; <b>G</b> Lightning (unlock in shop)<br>
       Kill enemies to earn 🪙 — spend between waves!<br>
@@ -239,11 +239,13 @@ window.addEventListener('DOMContentLoaded',buildVolUI);
 
 document.addEventListener('keydown',e=>{
   keys[e.key.toLowerCase()]=true;
-  if(running&&!gameOver&&!inShop) handleAbilityKey(e.key.toLowerCase());
+  if(running&&!gameOver&&!inShop){
+    if(e.key===' ') shootNearest();
+    else handleAbilityKey(e.key.toLowerCase());
+  }
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
 });
 document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-canvas.addEventListener('click',()=>{ if(running&&!gameOver&&!inShop) shootNearest(); });
 document.getElementById('playBtn').addEventListener('click',startGame);
 document.getElementById('skipBtn').addEventListener('click',closeShop);
 document.getElementById('cheatBtn').addEventListener('click',activateCheat);
