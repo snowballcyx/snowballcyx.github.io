@@ -78,6 +78,7 @@
     <div class="ab ready" id="abR"><span class="k">R</span> Shield <span class="cdtxt" id="cdR">Ready</span></div>
     <div class="ab ready" id="abF"><span class="k">F</span> Heal <span class="cdtxt" id="cdF">Ready</span></div>
     <div class="ab hidden-ab" id="abG"><span class="k">G</span> Lightning <span class="cdtxt" id="cdG">Ready</span></div>
+    <div class="ab hidden-ab" id="abT" style="border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.08);"><span class="k" style="color:#f59e0b;">T</span> 🌟 Snap <span class="cdtxt" id="cdT">0 left</span></div>
     <div class="ab ready" id="abClick"><span class="k">Space</span> Shoot <span class="cdtxt" id="cdClick">Ready</span></div>
   </div>
   <div id="overlay">
@@ -272,7 +273,10 @@ const player={x:W/2,y:H/2,r:24,hp:100,maxHp:100,speed:3,color:'#7b5fdb',shielded
 let enemies=[],projectiles=[],particles=[],shockwaves=[],floaters=[],lightningBolts=[];
 
 // ---- Boss state ----
-let bossRef=null; // pointer to the current boss enemy object
+let bossRef=null;
+
+// ---- Thanos Gauntlet ----
+let gauntletCharges=0,gauntletActive=false,gauntletGiven=false;
 
 // Boss patterns: each boss has a sequence of attacks it cycles through
 const BOSS_PATTERNS=[
@@ -328,6 +332,7 @@ function startGame(){
   document.getElementById('shopOverlay').classList.add('hidden');
   Object.keys(upgrades).forEach(k=>upgrades[k].level=0);
   score=0;wave=1;coins=0;running=true;gameOver=false;inShop=false;bossRef=null;
+  gauntletCharges=0;gauntletActive=false;gauntletGiven=false;
   player.x=W/2;player.y=H/2;player.hp=100;player.maxHp=100;player.speed=3;
   player.shielded=false;player.shieldTimer=0;player.invTimer=0;
   enemies=[];projectiles=[];particles=[];shockwaves=[];floaters=[];lightningBolts=[];
@@ -350,7 +355,32 @@ function openShop(){
   document.getElementById('shopOverlay').classList.remove('hidden');
   document.getElementById('shopCoins').textContent=coins;
   document.getElementById('shopWave').textContent=wave-1;
+  // Award gauntlet after wave 10 (once per game)
+  if((wave-1)>=10&&!gauntletGiven){
+    gauntletGiven=true;
+    gauntletCharges=3;
+    updateGauntletUI();
+    floaters.push({x:W/2,y:H/2,val:'🌟 THANOS GAUNTLET AWARDED! (T key, 3 uses)',life:180,color:'#f59e0b',isScore:true,big:true});
+    // Show a banner in shop
+    setTimeout(()=>{
+      const banner=document.createElement('div');
+      banner.style.cssText='background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.5);border-radius:8px;padding:8px 12px;color:#f59e0b;font-size:11px;letter-spacing:0.06em;text-align:center;margin-bottom:8px;';
+      banner.textContent='🌟 THANOS GAUNTLET UNLOCKED! Press T to snap all enemies (3 uses)';
+      const grid=document.getElementById('shopGrid');
+      grid.parentNode.insertBefore(banner,grid);
+    },50);
+  }
   renderShop();
+}
+function updateGauntletUI(){
+  const el=document.getElementById('abT');
+  if(!el) return;
+  if(gauntletCharges>0){
+    el.className='ab ready';
+    document.getElementById('cdT').textContent=gauntletCharges+' left';
+  } else {
+    el.className='ab hidden-ab';
+  }
 }
 function renderShop(){
   document.getElementById('shopCoins').textContent=coins;
@@ -570,6 +600,7 @@ function handleAbilityKey(key){
   if(key==='r') castShield();
   if(key==='f') castHeal();
   if(key==='g') castLightning();
+  if(key==='t') castGauntlet();
 }
 function castFireball(){
   if(CDs.q>0||enemies.length===0) return; CDs.q=BASE_CDS.q;
@@ -630,6 +661,30 @@ function castLightning(){
   });
   addParticles(player.x,player.y,'#facc15',22,5);
   sfxLightning();
+}
+function castGauntlet(){
+  if(gauntletCharges<=0||enemies.length===0) return;
+  gauntletCharges--;
+  gauntletActive=true;
+  // Snap — kill ALL enemies instantly
+  enemies.forEach(en=>{
+    en.hp=0;
+    addParticles(en.x,en.y,'#f59e0b',30,6);
+    addParticles(en.x,en.y,'#a855f7',20,5);
+    for(let i=0;i<8;i++){
+      const ang=Math.random()*Math.PI*2;
+      lightningBolts.push({x:en.x+Math.cos(ang)*en.r,y:en.y+Math.sin(ang)*en.r,r:en.r,life:22,maxLife:22});
+    }
+    floaters.push({x:en.x,y:en.y,val:'SNAPPED!',life:70,color:'#f59e0b',isScore:true,big:true});
+  });
+  // Big screen flash effect via a shockwave from center
+  shockwaves.push({x:W/2,y:H/2,r:0,maxR:Math.max(W,H),totalFrames:30,life:30,gold:true});
+  // sfx — deep snap boom
+  [150,100,70,50].forEach((f,i)=>{playTone(f,'sawtooth',0.4,0.5,i*0.08);playNoise(0.3,0.4,f*3,i*0.08);});
+  playTone(2000,'sine',0.1,0.3,0);
+  // Update gauntlet button
+  setTimeout(()=>gauntletActive=false,800);
+  updateGauntletUI();
 }
 
 // ---- Helpers ----
@@ -798,6 +853,8 @@ function updateHUD(){
     if(CDs[k]>0){cdEl.textContent=(CDs[k]/1000).toFixed(1)+'s';if(abEl)abEl.className='ab oncd';}
     else{cdEl.textContent='Ready';if(abEl)abEl.className='ab ready';}
   });
+  // Gauntlet T button
+  updateGauntletUI();
 }
 
 function draw(){
@@ -820,10 +877,19 @@ function draw(){
 
   shockwaves.forEach(s=>{
     const a=s.life/s.totalFrames;
-    ctx.strokeStyle=`rgba(100,200,255,${a*0.9})`;ctx.lineWidth=5*a;
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle=`rgba(200,240,255,${a*0.35})`;ctx.lineWidth=16*a;
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r*0.82,0,Math.PI*2);ctx.stroke();
+    if(s.gold){
+      // Gauntlet snap — gold/purple flash
+      ctx.fillStyle=`rgba(245,158,11,${a*0.18})`;ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle=`rgba(168,85,247,${a*0.9})`;ctx.lineWidth=8*a;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle=`rgba(245,158,11,${a*0.7})`;ctx.lineWidth=16*a;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r*0.6,0,Math.PI*2);ctx.stroke();
+    } else {
+      ctx.strokeStyle=`rgba(100,200,255,${a*0.9})`;ctx.lineWidth=5*a;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle=`rgba(200,240,255,${a*0.35})`;ctx.lineWidth=16*a;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r*0.82,0,Math.PI*2);ctx.stroke();
+    }
   });
 
   lightningBolts.forEach(b=>{
