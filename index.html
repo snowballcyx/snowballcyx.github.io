@@ -60,10 +60,12 @@
       <div class="stat">HP <span id="hpVal">100</span></div>
       <div class="stat">Score <span id="scoreVal">0</span></div>
       <div class="stat coin-stat">🪙 <span id="coinVal">0</span></div>
+      <div class="stat" id="comboStat" style="display:none;color:rgba(251,191,36,0.9);">COMBO <span id="comboVal" style="color:#fbbf24;">x1</span></div>
     </div>
     <div class="hud-right">
       <div class="stat">Wave <span id="waveVal">1</span></div>
       <div class="stat">Enemies <span id="enemyVal">0</span></div>
+      <div class="stat" style="color:rgba(255,255,255,0.3);">Best <span id="hsVal" style="color:rgba(255,255,255,0.5);">0</span></div>
     </div>
   </div>
   <div id="bossBar">
@@ -111,6 +113,21 @@ const W=canvas.width,H=canvas.height;
 
 let running=false,gameOver=false,inShop=false;
 let score=0,wave=1,coins=0,waveSpawning=false;
+let highScore=0;
+// Screen shake
+let shakeX=0,shakeY=0,shakeMag=0;
+function screenShake(mag){shakeMag=Math.max(shakeMag,mag);}
+// Combo system
+let combo=0,comboTimer=0,comboScore=0;
+// Momentum movement
+let velX=0,velY=0;
+// Low HP warning
+let lowHPPulse=0;
+// Hardcore mode
+let hardcoreMode=false;
+// Death recap
+let deathCause='';
+// Enemy type registry for new types
 const keys={};
 
 // ============================================================
@@ -165,6 +182,10 @@ function sfxShopBuy(){playTone(660,'sine',0.07,0.18,0);playTone(880,'sine',0.1,0
 function sfxWaveClear(){[523,659,784,1047,1319].forEach((f,i)=>playTone(f,'sine',0.18,0.22,i*0.08));}
 function sfxGameOver(){[400,300,200,100].forEach((f,i)=>playTone(f,'sawtooth',0.4,0.38,i*0.15));playNoise(0.6,0.28,150,0.1);}
 function sfxBossAppear(){[60,70,80,90,80,70,60].forEach((f,i)=>playTone(f,'sawtooth',0.2,0.45,i*0.06));playNoise(0.4,0.45,200,0);}
+function sfxCombo(n){const f=440+n*80;playTone(f,'sine',0.08,0.25,0);playTone(f*1.5,'sine',0.06,0.18,0.04);}
+function sfxExplode(){playNoise(0.3,0.5,300,0);playTone(120,'sawtooth',0.2,0.4,0);playTone(80,'square',0.15,0.35,0.07);}
+function sfxSnipe(){playTone(1200,'sawtooth',0.04,0.25,0);playTone(800,'square',0.06,0.2,0.03);}
+function sfxRespawn(){[300,500,700,1000,1400].forEach((f,i)=>playTone(f,'sine',0.1,0.3,i*0.06));}
 
 // Music sequencer
 const BPM_N=138,BPM_B=168;
